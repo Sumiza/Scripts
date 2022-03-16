@@ -9,16 +9,16 @@ def sectotext(seconds:int,restype:str=""):
                     
         restype:
                 default:    skips any part of the response that is 0.
-                    print(sectotext(12069123,"showall"))
-                    0 Years, 4 Months, 18 Days, 0 Hours, 32 Minutes, 3 Seconds
+                    print(sectotext(12069123))
+                    4 Months, 18 Days, 32 Minutes, 3 Seconds
 
                 showzeros:  trims any part before the first not 0.
                     print(sectotext(-12069123,"showzeros"))
                     4 Months, 18 Days, 0 Hours, 32 Minutes, 3 Seconds
                 
                 showall:    shows all parts.
-                    print(sectotext(12069123))
-                    4 Months, 18 Days, 32 Minutes, 3 Seconds
+                    print(sectotext(12069123,"showall"))
+                    0 Years, 4 Months, 18 Days, 0 Hours, 32 Minutes, 3 Seconds
                 
                 rawtuple:   returns a 6 part tuple.
                     print(sectotext(12069123,"rawtuple"))
