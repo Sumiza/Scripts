@@ -3,7 +3,8 @@ def sectotext(seconds:float,restype:str=""):
     Converts seconds to human readable text or tuple
     
     Args:
-        seconds:    amount of seconds for it to process,
+        seconds:    
+                    amount of seconds for it to process,
                     can be float (at least 3 decimals) or int,
                     can be negative but will be changed to positive.
                     
