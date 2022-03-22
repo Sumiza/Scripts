@@ -7,7 +7,6 @@ def sectotext(seconds:float,restype:str=""):
                     amount of seconds for it to process,
                     can be float (at least 3 decimals) or int,
                     can be negative but will be changed to positive.
-                    
         restype:
                 default:    skips any part of the response that is 0.
                     print(sectotext(12069123.135156484))
