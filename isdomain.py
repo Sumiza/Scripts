@@ -1,4 +1,4 @@
 import re
-a = re.search('^([a-z0-9\d-])*\.[a-z]{1,4}$',"google.com")
+a = re.search('^^[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9][.][a-zA-Z]*$',"google.com")
 if a:
     print(a.string)
