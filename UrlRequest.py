@@ -1,4 +1,3 @@
-
 class UrlRequest:
     """
         Putting urllib.request in a class to make it easier to use
@@ -19,8 +18,8 @@ class UrlRequest:
         if not headers.get('User-Agent'): # writes in a user agent if not there
             headers['User-Agent'] = 'UrlRequest'
         if auth: # Basic Auth
-            authhandle = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-            authhandle.add_password(None, url, auth[0], auth[1])
+            authhandle = urllib.request.HTTPPasswordMgrWithPriorAuth()
+            authhandle.add_password(None, url, auth[0], auth[1],is_authenticated=True)
             opener = urllib.request.build_opener(urllib.request.HTTPBasicAuthHandler(authhandle))
             urllib.request.install_opener(opener)
         if json: # json formatting and adding header
@@ -42,13 +41,3 @@ class UrlRequest:
             self.text = exception.reason
             self.status = 400
             self.headers = ""
-
-
-
-
-a = UrlRequest('https://httpbin.org/basic-auth/foo/bar', auth=('foo','bar'))
-print(a.text)
-print(a.status)
-a = UrlRequest('https://httpbin.org/ip')
-print(a.text)
-print(a.status)

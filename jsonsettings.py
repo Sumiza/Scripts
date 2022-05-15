@@ -1,4 +1,3 @@
-
 """
     Json Settings Read / Writer
 """
@@ -51,6 +50,6 @@ def settingsload(filename:str):
                 return settingsload(filename)
             value = tryjson(input("Please write the Value: "))
             settings[key] = value
-            print(json.dumps(settings,indent=6))
+            print(json.dumps(settings,indent=4))
 
 print(settingsload("settings.json"))
