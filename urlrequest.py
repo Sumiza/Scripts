@@ -82,6 +82,8 @@ class UrlRequest:
         return UrlRequest(*args,**kwargs,method='DELETE')
     def head(*args,**kwargs):
         return UrlRequest(*args,**kwargs,method='HEAD')
+    def patch(*args,**kwargs):
+        return UrlRequest(*args,**kwargs,method='PATCH')
 
 if __name__ == '__main__':
     a = UrlRequest('https://httpbin.org/ip')
