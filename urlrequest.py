@@ -9,12 +9,14 @@ class UrlRequest:
     """
     def __init__(self,
                 url:str,
-                data:str = "",
+                data:str = None,
                 json = None,
                 method:str = 'GET',
                 headers:dict = None,
                 timeout:float = 10,
-                auth:tuple = None):
+                auth:tuple = None,
+                raiseme = True # False to not raise exceptions
+                ):
 
         # importing here to keep it all contained
         # so can copy and paste this code into other scripts
@@ -26,8 +28,10 @@ class UrlRequest:
         if headers is None: # python quirk with default mutables
             headers = {}
 
-        if not headers.get('User-Agent'): # writes in a user agent if not there
-            headers['User-Agent'] = 'UrlRequest'
+        # writes in a user agent if not there
+        # default Python-urllib/X.X seems to be blocked by some
+        if not headers.get('User-Agent'):
+            headers['User-Agent'] = 'UrlRequest v1.0'
 
         if auth: # Basic Auth
             authhandle = urllib.request.HTTPPasswordMgrWithPriorAuth()
@@ -36,35 +40,41 @@ class UrlRequest:
             urllib.request.install_opener(opener)
 
         if json: # json formatting and adding header
-            headers['content-type'] = 'application/json, charset=utf-8'
+            headers['Content-Type'] = 'application/json, charset=utf-8'
             data = jsonclass.dumps(json)
 
-        data = data.encode('utf-8',errors='ignore')
+        if data: # data formatting
+            data = data.encode('utf-8',errors='ignore')
+
         req = urllib.request.Request(url,data=data,method=method,headers=headers)
 
         try:
             with urllib.request.urlopen(req, timeout=timeout) as request:
-                self.text = request.read().decode('utf-8',errors='backslashreplace')
+                self.raw = request.read()
+                self.text = self.raw.decode('utf-8',errors='backslashreplace')
                 self.status_code = request.status
                 self.headers = dict(request.headers)
                 try:
                     self.json = jsonclass.loads(self.text)
                 except jsonclass.JSONDecodeError:
-                    self.json = {"error":"No JSON returned"}
+                    self.json = None
 
         except urllib.error.HTTPError as exception:
             self.text = exception.reason
             self.status_code = exception.code
             self.headers = dict(exception.headers)
-            self.json = {"error":f'{exception.reason}'}
+            self.json = {"Error":f'{exception.reason}'}
+            if raiseme:
+                raise exception
 
         # catches connection errors
-        # comment out if you want to catch them yourself
         except urllib.error.URLError as exception:
             self.text = exception.reason
             self.status_code = 483 # unused code
             self.headers = {}
-            self.json = {"error":f'{exception.reason}'}
+            self.json = {"Error":f'{exception.reason}'}
+            if raiseme:
+                raise exception
 
     def __str__(self):
         return str(self.status_code)
@@ -86,15 +96,23 @@ class UrlRequest:
         return UrlRequest(*args,**kwargs,method='PATCH')
 
 if __name__ == '__main__':
-    a = UrlRequest('https://httpbin.org/ip')
-    print(a.text)
-    print(a.status_code)
-    print(a.headers)
-    print(a.json)
-    a = UrlRequest("https://httpbin.org/basic-auth/user/password",auth=('user','password'))
-    print(a.text)
-    a = UrlRequest("https://httpbin.org/post",method="POST",json={"hello":"world"})
-    print(a.text)
-    #drop in for requests
-    a = UrlRequest.get("https://httpbin.org/headers",headers={"hello":"world header test"})
-    print(a.text)
+    response = UrlRequest('https://httpbin.org/ip')
+    print(response.text)
+    print(response.status_code)
+    print(response.headers)
+    print(response.json)
+
+    response = UrlRequest("https://httpbin.org/basic-auth/user/password",auth=('user','password'))
+    print(response.text)
+
+    response = UrlRequest("https://httpbin.org/post",method="POST",json={"hello":"world"})
+    print(response.text)
+
+    response = UrlRequest("https://httpbin.org/image/png")
+    with open("test.png","wb") as f:
+        f.write(response.raw)
+    print(response.status_code)
+
+    # drop in for requests
+    response = UrlRequest.get("https://httpbin.org/headers",headers={"hello":"world header test"})
+    print(response.text)

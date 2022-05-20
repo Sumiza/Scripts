@@ -41,7 +41,7 @@ class DoHcheck:
 a = DoHcheck('https://dns.alidns.com/resolve?','github.com').check('A','AAAA','MX','TXT','NS','SOA','CNAME','PTR','SRV','SPF')
 # a = DoHcheck('https://dns.alidns.com/resolve?','github.com')
 print(json.dumps(a,indent=4))
-print(type(a))
+# print(type(a))
 # print(a['a']['Status'])
 print(a)
 
