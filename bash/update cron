@@ -1,0 +1,2 @@
+44 4 * * * apt update && apt upgrade -y && apt autoremove -y >/dev/null 2>&1
+55 5 * * * /root/lxdupdate.sh >/dev/null 2>&1
