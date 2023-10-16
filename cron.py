@@ -28,13 +28,13 @@ def cron(cron:str,timezone=None) -> bool:
 
     def parseall(parseme:list) -> list:
         output = []
-        for idx, t in enumerate(parseme):
-            if t is not None:
-                t = t.split(',')
+        for idx, part in enumerate(parseme):
+            if part is not None:
+                part = part.split(',')
                 hold = []
                 if idx == 0 or idx == 1: daymonth = 0
                 else : daymonth = 1 # there are no 0 days
-                for i in t:
+                for i in part:
                     hold.append(parsesingle(i,daymonth))
                     if len(hold) > 1:
                         hold[0] = hold[0] + hold[1]
@@ -45,20 +45,27 @@ def cron(cron:str,timezone=None) -> bool:
         return output
 
     parsedcron = parseall(cron)
-    print(parsedcron)
-    print(cron)
+    # print(parsedcron)
+    # print(cron)
     minutes = parsedcron[0]
     hours = parsedcron[1]
     days = parsedcron[2]
     months = parsedcron[3]
     weekday = parsedcron[4]
-
-    if months is not None and curdatetime.month in months: print('month')
-    if weekday is not None and curdatetime.weekday() in weekday: print('weekda')
-    if days is not None and curdatetime.day in days: print('day')
-    if hours is not None and curdatetime.hour in hours: print('hour')
-    if minutes is not None and curdatetime.minute in minutes: print('minue')
+    print(curdatetime.minute,curdatetime.hour,curdatetime.day,curdatetime.weekday(),curdatetime.month)
+    
+    if months is not None and curdatetime.month not in months: return False
+    if weekday is not None and curdatetime.weekday() not in weekday: return False
+    if days is not None and curdatetime.day not in days: return False
+    if hours is not None and curdatetime.hour not in hours: return False
+    if minutes is not None and curdatetime.minute not in minutes: return False
 
     return True
 
-print(cron('*/30 0 */5 * *'))
+oldtrig = None
+while True:
+    newtrig = time.time()//60
+    if oldtrig != newtrig:
+        oldtrig = newtrig
+        print(cron('*/2 */1 * * *'))
+    time.sleep(5)
