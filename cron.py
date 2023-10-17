@@ -17,14 +17,20 @@ def cron(cron:str,timezone=None) -> bool:
     curdatetime = datetime.datetime.now(tz=timezone)
 
     def parsesingle(r:str,daymonth:int) -> list:
+        if '-'in r and '/' in r:
+            r = r.replace('-',' ').replace('/',' ').split()
+            start = int(r[0]) % int(r[2])
+            return [i for i in range(int(r[0]),int(r[1])) if i % int(r[2]) == start]
+
         if '-' in r:
             r = r.split('-')
             return [i for i in range(int(r[0]),int(r[1])+1)]
-        elif '/' in r:
+        
+        if '/' in r:
             r = r.split('/')
             return [(i+daymonth)*int(r[1]) for i in range(int(r[0])//int(r[1]))]
-        else:
-            return [int(r)]
+        
+        return [int(r)]
 
     def parseall(parseme:list) -> list:
         output = []
@@ -52,7 +58,7 @@ def cron(cron:str,timezone=None) -> bool:
     days = parsedcron[2]
     months = parsedcron[3]
     weekday = parsedcron[4]
-    print(curdatetime.minute,curdatetime.hour,curdatetime.day,curdatetime.weekday(),curdatetime.month)
+    # print(curdatetime.minute,curdatetime.hour,curdatetime.day,curdatetime.weekday(),curdatetime.month)
     
     if months is not None and curdatetime.month not in months: return False
     if weekday is not None and curdatetime.weekday() not in weekday: return False
@@ -67,5 +73,5 @@ while True:
     newtrig = time.time()//60
     if oldtrig != newtrig:
         oldtrig = newtrig
-        print(cron('*/2 */1 * * *'))
+        print(cron('30-60/2 */2 5 1-5 *'))
     time.sleep(5)
