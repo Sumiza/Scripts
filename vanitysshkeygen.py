@@ -4,10 +4,10 @@ import time
 import multiprocessing
 
 howmany = 5
-lookfor = 'Cool'
-lettercase = True
+lookfor = 'Sumiza'
+lettercase = False
 passphrase = '""'
-comment = 'I_generated_a_key'
+comment = '@computer'
 rounds = 16
 
 
