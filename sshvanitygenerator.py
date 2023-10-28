@@ -237,7 +237,7 @@ if __name__ == '__main__':
     parser.add_argument("findstrings", help="String we are looking for", nargs='*')
     parser.add_argument('-l', help='Keep the case', action='store_true', default=False)
     parser.add_argument('-n', help='Number of keys to find', type=int, default=1)
-    parser.add_argument('-p', help='Passphrase',nargs='?',default=False)
+    parser.add_argument('-p', help='Passphrase',nargs='?',type=str,default=False)
     parser.add_argument('-c', help='Comment', type=str, default=None)
     parser.add_argument('-t', help='Number of cores to use', type=int, default=None)
     parser.add_argument('-r', help='Number of rounds to use for passphrase', type=int, default=16)
@@ -287,6 +287,6 @@ if __name__ == '__main__':
 
     if args.findstrings:
         run = LocalRun(args.findstrings, args.l, args.n, args.p, args.c, args.t, args.r)
-        # run.start()
+        run.start()
     else:
         print('Need at least one word to search for, please use --help for more information')
