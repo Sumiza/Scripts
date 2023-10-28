@@ -132,7 +132,7 @@ class SSHVanityGen():
                 break
 
             self.subrun(
-                f'ssh-keygen -t ed25519 -f {threadid}-{localcount} -N ""')
+                f'ssh-keygen -t ed25519 -f {threadid}-{localcount} -N "" -C ""')
 
             with open(f'{threadid}-{localcount}.pub', encoding="utf-8") as file:
                 pubkey = file.read()
@@ -181,6 +181,8 @@ class SSHVanityGen():
         """
         Start the vanity SSH key generation process.
         """
+        if not self.findlist:
+            raise ValueError('findlist is empty cant search for nothing')
 
         self.multilist = []
         sharedcount = multiprocessing.Value('i', 0)
@@ -274,6 +276,8 @@ if __name__ == '__main__':
 
             print(
                 f'Keys Generated: {sharedcount.value}, Keys Found: {foundcount.value}')
-
-    run = LocalRun(args.findstrings, args.l, args.n, args.p, args.c, args.t, args.r)
-    run.start()
+    if args.findstrings:
+        run = LocalRun(args.findstrings, args.l, args.n, args.p, args.c, args.t, args.r)
+        run.start()
+    else:
+        print('Need at least one word to search for, please use --help for more information')
