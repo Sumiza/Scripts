@@ -5,6 +5,7 @@ import os
 import subprocess
 import time
 import multiprocessing
+import shutil
 
 class SSHVanityGen():
     """
@@ -135,7 +136,7 @@ class SSHVanityGen():
                 f'ssh-keygen -t ed25519 -f {threadid}-{localcount} -N "" -C ""')
 
             with open(f'{threadid}-{localcount}.pub', encoding="utf-8") as file:
-                pubkey = file.read()
+                pubkey = file.read().strip()
 
             if self.lettercase is False:
                 pubkey = pubkey.lower()
@@ -152,15 +153,16 @@ class SSHVanityGen():
                     if self.passphrase:
                         self.subrun(
                             f'ssh-keygen -p -a {self.rounds} -f {threadid}-{localcount} -N {self.passphrase}')
-
-                    os.rename(f'{threadid}-{localcount}.pub',
+                    
+                    shutil.copy(f'{threadid}-{localcount}.pub',
                               f'{threadid}-{localcount}-{find}.pub')
-                    os.rename(f'{threadid}-{localcount}',
+                    shutil.copy(f'{threadid}-{localcount}',
                               f'{threadid}-{localcount}-{find}')
+                    
                     self.foundone(threadid, localcount, find, pubkey)
-                else:
-                    os.remove(f'{threadid}-{localcount}.pub')
-                    os.remove(f'{threadid}-{localcount}')
+
+            os.remove(f'{threadid}-{localcount}.pub')
+            os.remove(f'{threadid}-{localcount}')
 
             localcount += 1
             with sharedcount.get_lock():
@@ -237,7 +239,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', help='Passphrase', type=str, default=None)
     parser.add_argument('-c', help='Comment', type=str, default=None)
     parser.add_argument('-t', help='Number of cores to use', type=int, default=None)
-    parser.add_argument('-r', help='Number of rounds to use for passphrase', type=int, default=None)
+    parser.add_argument('-r', help='Number of rounds to use for passphrase', type=int, default=16)
     args = parser.parse_args()
 
     class LocalRun(SSHVanityGen):
@@ -276,6 +278,7 @@ if __name__ == '__main__':
 
             print(
                 f'Keys Generated: {sharedcount.value}, Keys Found: {foundcount.value}')
+    
     if args.findstrings:
         run = LocalRun(args.findstrings, args.l, args.n, args.p, args.c, args.t, args.r)
         run.start()
