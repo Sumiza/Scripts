@@ -146,18 +146,18 @@ class SSHVanityGen():
                     with foundcount.get_lock():
                         foundcount.value += 1
 
+                    shutil.copy(f'{threadid}-{localcount}.pub',
+                                f'{threadid}-{localcount}-{find}.pub')
+                    shutil.copy(f'{threadid}-{localcount}',
+                                f'{threadid}-{localcount}-{find}')
+
                     if self.comment:
                         self.subrun(
-                            f'ssh-keygen -c -f {threadid}-{localcount} -C {self.comment}')
+                            f'ssh-keygen -c -f {threadid}-{localcount}-{find} -C {self.comment}')
 
                     if self.passphrase:
                         self.subrun(
-                            f'ssh-keygen -p -a {self.rounds} -f {threadid}-{localcount} -N {self.passphrase}')
-
-                    shutil.copy(f'{threadid}-{localcount}.pub',
-                              f'{threadid}-{localcount}-{find}.pub')
-                    shutil.copy(f'{threadid}-{localcount}',
-                              f'{threadid}-{localcount}-{find}')
+                            f'ssh-keygen -p -a {self.rounds} -f {threadid}-{localcount}-{find} -N {self.passphrase}')
 
                     self.foundone(threadid, localcount, find, pubkey)
 
