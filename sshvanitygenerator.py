@@ -135,8 +135,8 @@ class SSHVanityGen():
             self.subrun(
                 f'ssh-keygen -t ed25519 -f {threadid}-{localcount} -N "" -C ""')
 
-            with open(f'{threadid}-{localcount}.pub', encoding="utf-8") as file:
-                pubkey = file.read().strip()
+            with open(f'{threadid}-{localcount}.pub', encoding='utf-8') as file:
+                pubkey = file.read()
 
             if self.lettercase is False:
                 pubkey = pubkey.lower()
@@ -159,7 +159,10 @@ class SSHVanityGen():
                         self.subrun(
                             f'ssh-keygen -p -a {self.rounds} -f {threadid}-{localcount}-{find} -N {self.passphrase}')
 
-                    self.foundone(threadid, localcount, find, pubkey)
+                    with open(f'{threadid}-{localcount}-{find}',encoding='utf-8') as file:
+                        prvkey = file.read()
+
+                    self.foundone(threadid, localcount, find, pubkey,prvkey)
 
             os.remove(f'{threadid}-{localcount}.pub')
             os.remove(f'{threadid}-{localcount}')
@@ -168,7 +171,7 @@ class SSHVanityGen():
             with sharedcount.get_lock():
                 sharedcount.value += 1
 
-    def foundone(self, threadid, localcount, find, pubkey):
+    def foundone(self, threadid:int, localcount:int, find:str, pubkey:str, prvkey:str):
         """
         Placeholder method to handle a found SSH key. Can be overridden in a subclass.
 
@@ -177,6 +180,7 @@ class SSHVanityGen():
         localcount: Local count of generated keys.
         find: The vanity pattern found.
         pubkey: The public key associated with the vanity pattern.
+        prvkey: Private key, careful with this one.
         """
 
     def start(self):
@@ -260,7 +264,7 @@ if __name__ == '__main__':
             Display the current status.
         """
 
-        def foundone(self, threadid, localcount, find, pubkey):
+        def foundone(self, threadid, localcount, find, pubkey, prvkey):
             """
             Handle a found SSH key.
 
@@ -269,9 +273,10 @@ if __name__ == '__main__':
             localcount: Local count of generated keys.
             find: The vanity pattern found.
             pubkey: The public key associated with the vanity pattern.
+            prvkey: Private key, careful with this one.
             """
 
-            print(threadid, localcount, find, pubkey,)
+            print(threadid, localcount, find, pubkey.strip())
 
         def status(self, sharedcount, foundcount):
             """
