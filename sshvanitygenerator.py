@@ -202,7 +202,7 @@ class SSHVanityGen():
         print(f'{len(self.multilist)} processes have started')
         self._waiting(sharedcount, foundcount)
 
-    def status(self, sharedcount, foundcount):
+    def status(self, sharedcount:int, foundcount:int):
         """
         Placeholder method to display the current status. Can be overridden in a subclass.
 
@@ -217,7 +217,7 @@ class SSHVanityGen():
         """
 
         while foundcount.value < self.findtotal:
-            self.status(sharedcount, foundcount)
+            self.status(sharedcount.value, foundcount.value)
             time.sleep(5)
 
         for process in self.multilist:
@@ -288,7 +288,7 @@ if __name__ == '__main__':
             """
 
             print(
-                f'Keys Generated: {sharedcount.value}, Keys Found: {foundcount.value}')
+                f'Keys Generated: {sharedcount}, Keys Found: {foundcount}')
 
     if args.findstrings:
         run = LocalRun(args.findstrings, args.l, args.n, args.p, args.c, args.t, args.r)
