@@ -3,6 +3,10 @@ import { createMimeMessage } from "mimetext";
 
 export default {
  async fetch(request, env) {
+   /**
+    * 
+    */
+   
    const msg = createMimeMessage();
    msg.setSender({ name: "GPT-4", addr: "<SENDER>@example.com" });
    msg.setRecipient("<RECIPIENT>@example2.com");
