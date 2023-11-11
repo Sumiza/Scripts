@@ -13,10 +13,10 @@ do
                 read -r inport type destip destport interface
                 
                 if ! [ "$interface" = "" ]; then
-                        interface="-i $interface "
+                        interface="-i $interface"
                 fi
                 
-                iptables -t nat -A PREROUTING "$interface" -p "$type" --dport "$inport" -j DNAT --to-destination "$destip":"$destport"
+                iptables -t nat -A PREROUTING $interface -p "$type" --dport "$inport" -j DNAT --to-destination "$destip":"$destport"
                 
         elif [ "$cmd" = "remove" ]; then
                 iptables -t nat -v -L -n --line-number | grep "DNAT"
