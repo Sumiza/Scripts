@@ -264,6 +264,10 @@ if __name__ == '__main__':
             Display the current status.
         """
 
+        def __init__(self, *args) -> None:
+            super().__init__(*args)
+            self.lastcount = 0
+
         def foundone(self, threadid, localcount, find, pubkey, prvkey):
             """
             Handle a found SSH key.
@@ -286,9 +290,10 @@ if __name__ == '__main__':
             sharedcount: Shared counter for tracking key generation progress.
             foundcount: Shared counter for tracking the number of keys found.
             """
-
+            persec = (sharedcount - self.lastcount)/5
+            self.lastcount = sharedcount
             print(
-                f'Keys Generated: {sharedcount}, Keys Found: {foundcount}')
+                f'Keys Found: {foundcount}, Generated: {sharedcount} - {persec}/s ')
 
     if args.findstrings:
         run = LocalRun(args.findstrings, args.l, args.n, args.p, args.c, args.t, args.r)
