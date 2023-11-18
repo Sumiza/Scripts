@@ -1,3 +1,7 @@
+import time
+import datetime
+
+
 def cron(cron:str,timezone=None) -> bool:
     cron = cron.split(' ')
     for idx, i in enumerate(cron):
@@ -73,5 +77,5 @@ while True:
     newtrig = time.time()//60
     if oldtrig != newtrig:
         oldtrig = newtrig
-        print(cron('30-60/2 */2 5 1-5 *'))
+        print(cron('*/2 */1 * * *'))
     time.sleep(5)
