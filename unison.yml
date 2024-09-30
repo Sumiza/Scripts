@@ -1,0 +1,31 @@
+version: "3.8"
+services:
+  unisonserver:
+    image: alpine
+    deploy:
+      mode: replicated
+      replicas: 1
+    volumes:
+      - ~/unisonsync/:/unisonsync/
+    command: >
+      sh -c "apk add unison
+            cd /unisonsync/
+            while true
+            do
+              unison -copymax 1 -socket 3000
+              sleep 1
+            done"
+
+  unisonclient:
+    image: alpine
+    deploy:
+      mode: global
+    volumes:
+      - ~/unisonsync/:/unisonsync/
+    command: >
+      sh -c "apk add unison
+            while true
+            do
+              unison /unisonsync/ socket://unisonserver:3000/ -batch -copyonconflict -prefer newer
+              sleep 10
+            done"
