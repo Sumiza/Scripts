@@ -12,7 +12,7 @@ services:
             cd /unisonsync/
             while true
             do
-              unison -copymax 1 -socket 3000
+              unison -socket 3000
               sleep 1
             done"
 
