@@ -50,11 +50,18 @@ clean_inactive_nodes(){
 
 # Deploy stack to a specific node with a constraint
 deploy_one(){
-    $DOCKER stack deploy -d -c "$FILENAME" "$name"-"$1"
+    if grep -q "node.hostname == ${TARGET_NODE}" "$FILENAME"; then
+        sed "s|\${TARGET_NODE}|$1|g" "$FILENAME" > docker_pod_temp.yml
+        $DOCKER stack deploy -d -c "docker_pod_temp.yml" "$name"-"$1"
+        [ -f docker_pod_temp.yml ] && rm docker_pod_temp.yml
+    else
+        $DOCKER stack deploy -d -c "$FILENAME" "$name"-"$1"
+    fi
+
     serviceID=$($DOCKER stack services "$name"-"$1" -q)
     for serviceID in $($DOCKER stack services "$name"-"$1" -q); do
-    $DOCKER service update -d --constraint-add node.hostname=="$1" "$serviceID"
-done
+        $DOCKER service update -d --constraint-add node.hostname=="$1" "$serviceID"
+    done
 }
 
 # Deploy stack globally to all (or --all) nodes that don't already have it
@@ -70,13 +77,6 @@ deploy_global(){
             deploy_one "$node"
         fi
     done
-}
-
-# Exit early if the target number of replicas is already satisfied
-check_done(){
-    if [ "$1" -eq 0 ]; then
-        exit 0
-    fi
 }
 
 # Deploy to a specific number of nodes
@@ -95,7 +95,7 @@ deploy_n_replicas(){
         fi
     done
 
-    check_done "$replicate"
+    [ "$replicate" -eq 0 ] && return
 
     # If too many replicas exist, randomly remove extras
     if [ "$replicate" -lt 0 ]; then
@@ -103,7 +103,7 @@ deploy_n_replicas(){
         for node in ${usednodesrandom}; do
             $DOCKER stack rm "$name"-"$node"
             replicate=$((replicate + 1))
-            check_done $replicate
+            [ "$replicate" -eq 0 ] && return
         done
     fi
 
@@ -117,7 +117,7 @@ deploy_n_replicas(){
                 deploy_one "$node"
                 replicate=$((replicate - 1))
             fi
-            check_done "$replicate"
+            [ "$replicate" -eq 0 ] && return
         done
     fi
 }
