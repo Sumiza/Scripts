@@ -1,11 +1,5 @@
 #!/bin/sh
 
-# Check for minimum 2 arguments: the compose file and a command
-if [ $# -lt 2 ]; then
-    echo "Usage: ./run <compose-file.yml> [remove|clean|update|deploy [replicas|--all]]"
-    exit 1
-fi
-
 FILENAME="$1"  # First argument: Docker Compose file
 name=$(echo "$FILENAME" | cut -d '.' -f 1)  # Extract stack base name from file
 DOCKER=$(command -v docker)  # Find docker binary location
@@ -122,8 +116,60 @@ deploy_n_replicas(){
     fi
 }
 
-# Handle subcommands
-if [ "$2" = "remove" ]; then
+# Handle subcommands and help
+if [ $# -lt 2 ] || [ "$2" = "help" ] || [ "$2" = "--help" ] || [ "$2" = "-h" ]; then
+    echo
+    echo "Docker Stack Orchestration Script"
+    echo
+    echo "Usage:"
+    echo "  ./run <compose-file.yml> <command> [options]"
+    echo
+    echo "Commands:"
+    echo "  deploy [N]        Deploy the stack to N active nodes"
+    echo "  deploy --all      Deploy the stack to all nodes (ready or not)"
+    echo "  update            Update stacks that already exist"
+    echo "  remove            Remove all deployed stacks"
+    echo "  clean             Remove stacks from inactive or unreachable nodes"
+    echo "  help              Show this help message"
+    echo
+    echo "Arguments:"
+    echo "  <compose-file.yml>  Path to a Docker Compose file"
+    echo
+    echo "Behavior:"
+    echo "  - Each stack is deployed to a single, randomly selected node."
+    echo "  - All services within the stack are restricted to run only on that node."
+    echo "  - This ensures the stack is not spread across multiple nodes."
+    echo "  - Mimics Kubernetes pod-level scheduling on a per-node basis."
+    echo "  - Useful for isolating workloads per node."
+    echo "  - Stack names follow the pattern: <basename>-<node>"
+    echo
+    echo "Maintenance:"
+    echo "  - If a node goes offline, the associated stack becomes unreachable."
+    echo "  - Run './run <file> clean' to remove stacks from inactive nodes."
+    echo "  - Then run './run <file> deploy <count>' to restore the desired number of stacks."
+    echo "  - These steps can be automated via a cron job for self-healing."
+    echo "  - Example (every 10 minutes to maintain 3 running stacks):"
+    echo "    */10 * * * * /path/to/run my-compose.yml clean && /path/to/run my-compose.yml deploy 3"
+    echo
+    echo "(OPTIONAL) Compose File Notes:"
+    echo "  - Use '\${TARGET_NODE}' in your Compose file's placement constraints."
+    echo "  - The script replaces \${TARGET_NODE} with the appropriate hostname during deployment."
+    echo "  - Example constraint: node.hostname == \${TARGET_NODE}"
+    echo "  - This is optional but ensures containers are not placed on unintended nodes before deployment."
+    echo
+    echo "Examples:"
+    echo "  ./run app.yml deploy 3         Deploy to 3 available nodes"
+    echo "  ./run app.yml deploy --all     Deploy to all known nodes"
+    echo "  ./run app.yml update           Update only existing stacks"
+    echo "  ./run app.yml clean            Remove stacks from inactive nodes"
+    echo "  ./run app.yml remove           Remove all deployed stacks"
+    echo
+    echo "Notes:"
+    echo "  - Compose files may use \${TARGET_NODE} for node affinity."
+    echo "  - Requires Docker Swarm (uses 'docker stack' and 'docker node' commands)."
+    echo
+
+elif [ "$2" = "remove" ]; then
     remove_all_stacks
 
 elif [ "$2" = "clean" ]; then
@@ -140,12 +186,4 @@ elif [ "$2" = "deploy" ]; then
     else
         deploy_global
     fi
-
-elif [ "$2" = "help" ]; then
-    echo "Usage:"
-    echo "  ./run file.yml deploy [count]  - Deploy to --all or N nodes"
-    echo "  ./run file.yml update          - Update existing stacks"
-    echo "  ./run file.yml remove          - Remove all stacks"
-    echo "  ./run file.yml clean           - Remove stacks from inactive nodes"
-    exit 0
 fi
