@@ -52,7 +52,9 @@ clean_inactive_nodes(){
 deploy_one(){
     $DOCKER stack deploy -d -c "$FILENAME" "$name"-"$1"
     serviceID=$($DOCKER stack services "$name"-"$1" -q)
+    for serviceID in $($DOCKER stack services "$name"-"$1" -q); do
     $DOCKER service update -d --constraint-add node.hostname=="$1" "$serviceID"
+done
 }
 
 # Deploy stack globally to all (or --all) nodes that don't already have it
