@@ -6,19 +6,19 @@ DOCKER=$(command -v docker)  # Find docker binary location
 
 # Get list of all Docker nodes with their status and availability
 get_nodes(){
-    $DOCKER node ls --format "{{.Hostname}} {{.Status}} {{.Availability}}"
+    "$DOCKER" node ls --format "{{.Hostname}} {{.Status}} {{.Availability}}"
 }
 
 # Get list of currently running stack names
 get_stack(){
-    $DOCKER stack ls --format "{{.Name}}"
+    "$DOCKER" stack ls --format "{{.Name}}"
 }
 
 # Remove all stacks matching the naming pattern across all nodes
 remove_all_stacks(){
     nodes=$(get_nodes | cut -d ' ' -f 1)
-    for node in ${nodes}; do
-        $DOCKER stack rm "$name"-"$node" 2> /dev/null
+    for node in $nodes; do
+        remove_one "$node"
     done 
 }
 
@@ -26,10 +26,9 @@ remove_all_stacks(){
 update_stack(){
     stacks=$(get_stack)
     nodes=$(get_nodes | cut -d ' ' -f 1)
-    for node in ${nodes}; do
-        stackname="$name"-"$node"
-        if echo "$stacks" | grep -q "$stackname"; then
-            $DOCKER stack deploy -d -c "$FILENAME" "$name"-"$node" 
+    for node in $nodes; do
+        if echo "$stacks" | grep -q "$name-$node"; then
+            deploy_one "$node"
         fi
     done
 }
@@ -37,37 +36,44 @@ update_stack(){
 # Remove stacks on nodes that are not Ready and Active
 clean_inactive_nodes(){
     nodes=$(get_nodes | grep -v "Ready Active" | cut -d ' ' -f 1)
-    for node in ${nodes}; do
-        $DOCKER stack rm "$name"-"$node" 2> /dev/null
+    stacks=$(get_stack)
+    for node in $nodes; do
+        if echo "$stacks" | grep -q "$name-$node"; then
+            remove_one "$node"
+        fi
     done
+}
+
+remove_one(){
+    "$DOCKER" stack rm "$name"-"$1" 2> /dev/null
+    sleep 5 # allows Docker to clean up networks properly before next operation
 }
 
 # Deploy stack to a specific node with a constraint
 deploy_one(){
     if grep -q "node.hostname == ${TARGET_NODE}" "$FILENAME"; then
-        sed "s|\${TARGET_NODE}|$1|g" "$FILENAME" > docker_pod_temp.yml
-        $DOCKER stack deploy -d -c "docker_pod_temp.yml" "$name"-"$1"
-        [ -f docker_pod_temp.yml ] && rm docker_pod_temp.yml
+        sed "s|\${TARGET_NODE}|$1|g" "$FILENAME" > docker_pod_temp_$$.yml
+        "$DOCKER" stack deploy -d -c "docker_pod_temp_$$.yml" "$name"-"$1"
+        [ -f docker_pod_temp_$$.yml ] && rm docker_pod_temp_$$.yml
     else
-        $DOCKER stack deploy -d -c "$FILENAME" "$name"-"$1"
+        "$DOCKER" stack deploy -d -c "$FILENAME" "$name"-"$1"
     fi
-
-    serviceID=$($DOCKER stack services "$name"-"$1" -q)
-    for serviceID in $($DOCKER stack services "$name"-"$1" -q); do
-        $DOCKER service update -d --constraint-add node.hostname=="$1" "$serviceID"
+    # same constraint can be added twice
+    for serviceID in $("$DOCKER" stack services "$name"-"$1" -q); do
+        "$DOCKER" service update -d --constraint-add "node.hostname == $1" "$serviceID"
     done
+    sleep 5 # without this sometimes commands would not propagate
 }
 
 # Deploy stack globally to all (or --all) nodes that don't already have it
 deploy_global(){
-    nodes=$(get_nodes | grep "Ready Active" | sort | cut -d ' ' -f 1)
+    nodes=$(get_nodes | grep "Ready Active" | cut -d ' ' -f 1)
     stacks=$(get_stack)
     if [ "$1" = "--all" ]; then
-        nodes=$(get_nodes | sort | cut -d ' ' -f 1)
+        nodes=$(get_nodes | cut -d ' ' -f 1)
     fi
-    for node in ${nodes}; do
-        stackname="$name"-"$node"
-        if ! echo "$stacks" | grep -q "$stackname"; then
+    for node in $nodes; do
+        if ! echo "$stacks" | grep -q "$name-$node"; then
             deploy_one "$node"
         fi
     done
@@ -82,8 +88,7 @@ deploy_n_replicas(){
 
     # Identify nodes already running the stack
     for node in $nodes; do
-        stackname="$name"-"$node"
-        if echo "$stacks" | grep -q "$stackname"; then
+        if echo "$stacks" | grep -q "$name-$node"; then
             usednodes="$node $usednodes"
             replicate=$((replicate - 1))
         fi
@@ -93,20 +98,17 @@ deploy_n_replicas(){
 
     # If too many replicas exist, randomly remove extras
     if [ "$replicate" -lt 0 ]; then
-        usednodesrandom=$(echo "$usednodes" | tr ' ' '\n' | sort -R)
-        for node in ${usednodesrandom}; do
-            $DOCKER stack rm "$name"-"$node"
+        for node in $(echo "$usednodes" | tr ' ' '\n' | shuf); do
+            remove_one "$node"
             replicate=$((replicate + 1))
             [ "$replicate" -eq 0 ] && return
         done
     fi
 
-    # Deploy to additional Ready Active nodes if needed
-    readynodes=$(get_nodes | grep "Ready Active" | sort -R | cut -d ' ' -f 1)
-    readynodecount=$(echo "$readynodes" | wc -w)
-
-    if [ "$readynodecount" -ge 1 ]; then
-        for node in ${readynodes}; do
+    # Deploy to additional random Ready Active nodes as needed
+    readynodes=$(get_nodes | grep "Ready Active" | cut -d ' ' -f 1 | shuf)
+    if [ "$(echo "$readynodes" | wc -w)" -ge 1 ]; then
+        for node in $readynodes; do
             if ! echo "$usednodes" | grep -q "$node"; then
                 deploy_one "$node"
                 replicate=$((replicate - 1))
@@ -148,18 +150,19 @@ if [ $# -lt 2 ] || [ "$2" = "help" ] || [ "$2" = "--help" ] || [ "$2" = "-h" ]; 
     echo "  - Run './run <file> clean' to remove stacks from inactive nodes."
     echo "  - Then run './run <file> deploy <count>' to restore the desired number of stacks."
     echo "  - These steps can be automated via a cron job for self-healing."
-    echo "  - Example (every 10 minutes to maintain 3 running stacks):"
-    echo "    */10 * * * * /path/to/run my-compose.yml clean && /path/to/run my-compose.yml deploy 3"
+    echo "  - Example (every 5 minutes to maintain 3 running stacks):"
+    echo "    */5 * * * * /path/to/run my-compose.yml clean && /path/to/run my-compose.yml deploy 3"
     echo
     echo "(OPTIONAL) Compose File Notes:"
     echo "  - Use '\${TARGET_NODE}' in your Compose file's placement constraints."
     echo "  - The script replaces \${TARGET_NODE} with the appropriate hostname during deployment."
     echo "  - Example constraint: node.hostname == \${TARGET_NODE}"
-    echo "  - This is optional but ensures containers are not placed on unintended nodes before deployment."
+    echo "  - This is optional but ensures containers are not placed on unintended nodes before assignment."
     echo
     echo "Examples:"
+    echo "  ./run app.yml deploy           Deploy to all available nodes"
     echo "  ./run app.yml deploy 3         Deploy to 3 available nodes"
-    echo "  ./run app.yml deploy --all     Deploy to all known nodes"
+    echo "  ./run app.yml deploy --all     Deploy to all known nodes (including offline / drain nodes)"
     echo "  ./run app.yml update           Update only existing stacks"
     echo "  ./run app.yml clean            Remove stacks from inactive nodes"
     echo "  ./run app.yml remove           Remove all deployed stacks"
