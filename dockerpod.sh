@@ -28,7 +28,13 @@ update_stack(){
     nodes=$(get_nodes | cut -d ' ' -f 1)
     for node in $nodes; do
         if echo "$stacks" | grep -q "$name-$node"; then
-            deploy_one "$node"
+            if [ "$1" = "--force" ]; then
+                for service in $("$DOCKER" stack services -q "$name-$node"); do
+                    "$DOCKER" service update -d "$service" --force
+                done
+            else
+                deploy_one "$node"
+            fi
         fi
     done
 }
@@ -179,7 +185,11 @@ elif [ "$2" = "clean" ]; then
     clean_inactive_nodes
 
 elif [ "$2" = "update" ]; then
-    update_stack
+    if [ "$3" = "--force" ]; then
+        update_stack "$3"
+    else
+        update_stack
+    fi
 
 elif [ "$2" = "deploy" ]; then
     if [ "$3" = "--all" ]; then
