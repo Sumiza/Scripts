@@ -4,7 +4,7 @@ from email.message import MIMEPart
 from email.parser import Parser
 from email.policy import default
 
-def getemail(username:str,password:str,domain:str): 
+def getemail(username:str,password:str,domain:str,delete:bool=True) -> dict: 
 
     M = imaplib.IMAP4_SSL(host=domain)
     M.login(username, password)
@@ -28,7 +28,8 @@ def getemail(username:str,password:str,domain:str):
     builddict['subject'] = email.get('subject')
     builddict['date'] = email.get('date')
 
-    M.store('1', '+FLAGS', '\\Deleted')
+    if delete:
+        M.store('1', '+FLAGS', '\\Deleted')
 
     M.close()
     M.logout()
