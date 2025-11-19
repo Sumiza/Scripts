@@ -62,7 +62,7 @@ class FolderFtps():
                     recursive_folders(file_folder_tree)
                 if data['type'] == 'file':
                     with open(folder_file_abs,'wb') as f:
-                        # self.ftp.retrbinary(f'RETR {file_folder_tree}',lambda data: f.write(data))
+                        self.ftp.retrbinary(f'RETR {file_folder_tree}',lambda data: f.write(data))
                         print(f'Wrote file {file_folder}')
         recursive_folders(self.remote_folder)
 
