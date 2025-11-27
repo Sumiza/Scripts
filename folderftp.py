@@ -60,9 +60,12 @@ class FolderFtps():
                 if data['type'] == 'dir':
                     recursive_folders(file_folder_tree)
                 if data['type'] == 'file':
-                    with open(folder_file_abs,'wb') as f:
-                        self.ftp.retrbinary(f'RETR {file_folder_tree}',lambda data: f.write(data))
-                        print(f'Wrote file {folder_file_abs}')
+                    if os.path.exists(folder_file_abs) and os.path.getsize(folder_file_abs) == int(data['size']):
+                        print(f"Duplicate file {folder_file_abs}")
+                    else:
+                        with open(folder_file_abs,'wb') as f:
+                            self.ftp.retrbinary(f'RETR {file_folder_tree}',lambda data: f.write(data))
+                            print(f'Wrote file {folder_file_abs}')
         recursive_folders(self.remote_folder)
 
         self.ftp.quit()
