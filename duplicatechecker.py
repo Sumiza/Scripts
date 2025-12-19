@@ -1,29 +1,28 @@
 import os
 import hashlib
 
-allfiles = set()
-
-
-def hashme(file, hashtype=None):
-    hashhold = hashtype or hashlib.sha256()
+def hashme(file: str) -> str:
     with open(file, 'rb') as f:
-        hashhold.update(f.read())
-        return hashhold.hexdigest()
+        hashdata = hashlib.sha512()
+        while chunk := f.read(1_000_000):
+            hashdata.update(chunk)
+        return hashdata.hexdigest()
 
+def isdupe(hash: str, allhash: set[str] = set()) -> bool:
+    if hash in allhash:
+        return True
+    allhash.add(hash)
+    return False
 
-def find_duplicate(folder, delete=False):
+def find_duplicate(folder: str, delete: bool = False) -> None:
     for root, _, files in os.walk(folder):
         for file in files:
-            fileloc = os.path.abspath(root + "/" + file)
-            hashhold = hashme(fileloc)
-            if hashhold in allfiles:
+            file = os.path.join(os.path.abspath(root), file)
+            if isdupe(hashme(file)):
                 if delete:
-                    print('[Deleting]', fileloc)
-                    os.remove(fileloc)
+                    print('[Deleting]', file)
+                    os.remove(file)
                 else:
-                    print('[duplicate]', fileloc)
-            else:
-                allfiles.add(hashhold)
-
+                    print('[Duplicate]', file)
 
 find_duplicate(os.getcwd(), False)
