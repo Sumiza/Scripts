@@ -21,6 +21,28 @@ remove_all_stacks(){
         remove_one "$node"
     done 
 }
+# Only update a specific number of existing stacks
+update_count(){
+    count=$1
+    stacks=$(get_stack)
+    nodes=$(get_nodes | cut -d ' ' -f 1)
+    current=0
+
+    for node in $nodes; do
+        if echo "$stacks" | grep -q "$name-$node"; then
+            current=$((current + 1))
+            if [ "$current" -le "$count" ]; then
+                if [ "$2" = "--force" ]; then
+                    for service in $("$DOCKER" stack services -q "$name-$node"); do
+                        "$DOCKER" service update -d "$service" --force
+                    done
+                else
+                    deploy_one "$node"
+                fi
+            fi
+        fi
+    done
+}
 
 # Re-deploy stacks that already exist on active nodes
 update_stack(){
@@ -187,6 +209,12 @@ elif [ "$2" = "clean" ]; then
 elif [ "$2" = "update" ]; then
     if [ "$3" = "--force" ]; then
         update_stack "$3"
+    elif [ "$3" ]; then
+        if [ "$4" = "--force" ]; then
+            update_count "$3" "$4"
+        else
+            update_count "$3"
+        fi
     else
         update_stack
     fi
