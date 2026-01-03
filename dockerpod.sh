@@ -26,12 +26,25 @@ remove_all_stacks(){
 update_stack(){
     stacks=$(get_stack)
     nodes=$(get_nodes | cut -d ' ' -f 1)
+    current=0
+
     for node in $nodes; do
         if echo "$stacks" | grep -q "$name-$node"; then
             if [ "$1" = "--force" ]; then
                 for service in $("$DOCKER" stack services -q "$name-$node"); do
                     "$DOCKER" service update -d "$service" --force
                 done
+            elif [ "$1" ]; then
+                current=$((current + 1))
+                if [ "$current" -le "$1" ]; then
+                    if [ "$2" = "--force" ]; then
+                        for service in $("$DOCKER" stack services -q "$name-$node"); do
+                            "$DOCKER" service update -d "$service" --force
+                        done
+                    else
+                        deploy_one "$node"
+                    fi
+                fi
             else
                 deploy_one "$node"
             fi
@@ -57,7 +70,7 @@ remove_one(){
 
 # Deploy stack to a specific node with a constraint
 deploy_one(){
-    if grep -q "node.hostname == ${TARGET_NODE}" "$FILENAME"; then
+    if grep -q "\${TARGET_NODE}" "$FILENAME"; then
         sed "s|\${TARGET_NODE}|$1|g" "$FILENAME" > docker_pod_temp_$$.yml
         "$DOCKER" stack deploy -d -c "docker_pod_temp_$$.yml" "$name"-"$1"
         [ -f docker_pod_temp_$$.yml ] && rm docker_pod_temp_$$.yml
@@ -133,45 +146,48 @@ if [ $# -lt 2 ] || [ "$2" = "help" ] || [ "$2" = "--help" ] || [ "$2" = "-h" ]; 
     echo "  ./run <compose-file.yml> <command> [options]"
     echo
     echo "Commands:"
-    echo "  deploy [N]        Deploy the stack to N active nodes"
-    echo "  deploy --all      Deploy the stack to all nodes (ready or not)"
-    echo "  update            Update stacks that already exist"
-    echo "  remove            Remove all deployed stacks"
-    echo "  clean             Remove stacks from inactive or unreachable nodes"
-    echo "  help              Show this help message"
+    echo "  deploy                 Deploy the stack to all currently active nodes"
+    echo "  deploy [N]             Deploy the stack to N active nodes"
+    echo "  deploy --all           Deploy the stack to all nodes (ready or not)"
+    echo "  update [N] [--force]   Update existing stacks (optionally limit to N)"
+    echo "                         If --force is provided the script issues 'docker service update --force'"
+    echo "                         instead of performing a full redeploy for the selected stacks."
+    echo "  remove                 Remove all deployed stacks"
+    echo "  clean                  Remove stacks from inactive or unreachable nodes"
+    echo "  help                   Show this help message"
     echo
     echo "Arguments:"
-    echo "  <compose-file.yml>  Path to a Docker Compose file"
+    echo "  <compose-file.yml>     Path to a Docker Compose file"
     echo
     echo "Behavior:"
-    echo "  - Each stack is deployed to a single, randomly selected node."
-    echo "  - All services within the stack are restricted to run only on that node."
-    echo "  - This ensures the stack is not spread across multiple nodes."
-    echo "  - Mimics Kubernetes pod-level scheduling on a per-node basis."
-    echo "  - Useful for isolating workloads per node."
-    echo "  - Stack names follow the pattern: <basename>-<node>"
+    echo "  - Each stack is deployed to a single node (named <basename>-<node>)."
+    echo "  - Services are constrained to run only on the assigned node."
+    echo "  - When deploying, the script will replace \${TARGET_NODE} in your compose file if present."
+    echo "  - After deploying the stack the script also enforces a node.hostname constraint on each service."
     echo
     echo "Maintenance:"
     echo "  - If a node goes offline, the associated stack becomes unreachable."
     echo "  - Run './run <file> clean' to remove stacks from inactive nodes."
     echo "  - Then run './run <file> deploy <count>' to restore the desired number of stacks."
-    echo "  - These steps can be automated via a cron job for self-healing."
+    echo "  - These steps can be automated via cron for self-healing."
     echo "  - Example (every 5 minutes to maintain 3 running stacks):"
     echo "    */5 * * * * /path/to/run my-compose.yml clean && /path/to/run my-compose.yml deploy 3"
     echo
     echo "(OPTIONAL) Compose File Notes:"
-    echo "  - Use '\${TARGET_NODE}' in your Compose file's placement constraints."
-    echo "  - The script replaces \${TARGET_NODE} with the appropriate hostname during deployment."
+    echo "  - Use '\${TARGET_NODE}' in your Compose file's placement constraints to allow scripted replacement."
+    echo "  - The script substitutes \${TARGET_NODE} with the target hostname during deployment."
     echo "  - Example constraint: node.hostname == \${TARGET_NODE}"
-    echo "  - This is optional but ensures containers are not placed on unintended nodes before assignment."
     echo
     echo "Examples:"
-    echo "  ./run app.yml deploy           Deploy to all available nodes"
-    echo "  ./run app.yml deploy 3         Deploy to 3 available nodes"
-    echo "  ./run app.yml deploy --all     Deploy to all known nodes (including offline / drain nodes)"
-    echo "  ./run app.yml update           Update only existing stacks"
-    echo "  ./run app.yml clean            Remove stacks from inactive nodes"
-    echo "  ./run app.yml remove           Remove all deployed stacks"
+    echo "  ./run app.yml deploy             Deploy to currently available Ready Active nodes"
+    echo "  ./run app.yml deploy 3           Deploy to 3 available nodes"
+    echo "  ./run app.yml deploy --all       Deploy to all known nodes (including offline/drain)"
+    echo "  ./run app.yml update             Redeploy existing stacks (per-node redeploy)"
+    echo "  ./run app.yml update 2           Update only 2 existing stacks"
+    echo "  ./run app.yml update --force     Force-update all existing stacks via 'docker service update --force'"
+    echo "  ./run app.yml update 2 --force   Force-update only 2 existing stacks"
+    echo "  ./run app.yml clean              Remove stacks from inactive nodes"
+    echo "  ./run app.yml remove             Remove all deployed stacks"
     echo
     echo "Notes:"
     echo "  - Compose files may use \${TARGET_NODE} for node affinity."
@@ -187,6 +203,12 @@ elif [ "$2" = "clean" ]; then
 elif [ "$2" = "update" ]; then
     if [ "$3" = "--force" ]; then
         update_stack "$3"
+    elif [ "$3" ]; then
+        if [ "$4" = "--force" ]; then
+            update_stack "$3" "$4"
+        else
+            update_stack "$3"
+        fi
     else
         update_stack
     fi
