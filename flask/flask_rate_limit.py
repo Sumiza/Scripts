@@ -41,7 +41,7 @@ class BucketRateLimit():
 
 def bucket_limit(bucket: BucketRateLimit):
     def decorator(func):
-        def bucket_worker(*args, **kwargs):
+        def worker(*args, **kwargs):
             if bucket.cloudflare:
                 remote_ip = request.headers.get(
                     'CF-Connecting-IP', None) or request.remote_addr
@@ -81,13 +81,14 @@ def bucket_limit(bucket: BucketRateLimit):
                         del bucket.ips[ip]
 
             return func(*args, **kwargs)
-        return bucket_worker
+        worker.__name__ = func.__name__
+        return worker
     return decorator
 
 
 def sliding_window(slide: SlidingWindowRateLimit):
     def decorator(func):
-        def sliding_worker(*args, **kwargs):
+        def worker(*args, **kwargs):
 
             if slide.cloudflare:
                 remote_ip = request.headers.get(
@@ -113,13 +114,14 @@ def sliding_window(slide: SlidingWindowRateLimit):
                         del slide.ips[ip]
 
             return func(*args, **kwargs)
-        return sliding_worker
+        worker.__name__ = func.__name__
+        return worker
     return decorator
 
 
 def fixed_window(fixed: FixedWindowRateLimit):
     def decorator(func):
-        def fixed_worker(*args, **kwargs):
+        def worker(*args, **kwargs):
             if fixed.cloudflare:
                 remote_ip = request.headers.get(
                     'CF-Connecting-IP', None) or request.remote_addr
@@ -136,5 +138,6 @@ def fixed_window(fixed: FixedWindowRateLimit):
                 return Response(status=429, headers={'Retry-After': fixed.resettime - curtime})
 
             return func(*args, **kwargs)
-        return fixed_worker
+        worker.__name__ = func.__name__
+        return worker
     return decorator
