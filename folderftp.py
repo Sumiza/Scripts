@@ -35,9 +35,15 @@ class FolderFtps():
         self.ftp.quit()
 
     def upload_file(self,files:list,root:str):
+        def get_remote_file_size(file:str):
+            try:
+                return self.ftp.size(file)
+            except ftplib.error_perm:
+                return None
+            
         os.chdir(root)
         for file in files:
-            if os.path.getsize(file) == self.ftp.size(file):
+            if os.path.getsize(file) == get_remote_file_size(file):
                 print(f"Duplicate file {file}")
                 continue
             with open(file,'rb') as f:
@@ -83,3 +89,5 @@ if __name__ == '__main__':
         'userfolder',
         30
     )
+
+
