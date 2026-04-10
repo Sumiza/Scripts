@@ -37,6 +37,9 @@ class FolderFtps():
     def upload_file(self,files:list,root:str):
         os.chdir(root)
         for file in files:
+            if os.path.getsize(file) == self.ftp.size(file):
+                print(f"Duplicate file {file}")
+                continue
             with open(file,'rb') as f:
                 self.ftp.storbinary(f'STOR {file}',f)
                 print(f'Uploaded {file}')
