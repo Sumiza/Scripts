@@ -1,5 +1,6 @@
 import ftplib
 import os
+import ssl
 
 class FolderFtps():
 
@@ -17,7 +18,10 @@ class FolderFtps():
         ftps = ftplib.FTP_TLS(timeout=self.timeout)
         ftps.connect(self.url,self.port)
         ftps.login(self.username,self.password)
-        ftps.prot_p()
+        setprot= ftps.prot_p()
+        print(setprot)
+        assert setprot.startswith('200')
+        assert isinstance(ftps.transfercmd("LIST"), ssl.SSLSocket)
         print(ftps.getwelcome())
         return ftps
     
@@ -89,5 +93,4 @@ if __name__ == '__main__':
         'userfolder',
         30
     )
-
 
