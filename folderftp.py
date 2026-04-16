@@ -20,8 +20,16 @@ class FolderFtps():
         ftps.login(self.username,self.password)
         setprot= ftps.prot_p()
         print(setprot)
+
         assert setprot.startswith('200')
-        assert isinstance(ftps.transfercmd("LIST"), ssl.SSLSocket)
+        assert isinstance(ftps.sock, ssl.SSLSocket)
+
+        with ftps.transfercmd("LIST") as conn:
+            assert isinstance(conn,ssl.SSLSocket)
+            while conn.recv(5000):
+                pass
+        ftps.voidresp()
+
         print(ftps.getwelcome())
         return ftps
     
@@ -93,4 +101,3 @@ if __name__ == '__main__':
         'userfolder',
         30
     )
-
