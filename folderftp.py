@@ -34,6 +34,7 @@ class FolderFtps():
         return ftps
     
     def upload(self):
+        # if self.ftp.sock is None 
         self.ftp = self.ftps_connect()
 
         for root,dirs,files in os.walk(self.local_folder):
@@ -45,6 +46,7 @@ class FolderFtps():
             self.upload_file(files,root)
 
         self.ftp.quit()
+    
 
     def upload_file(self,files:list,root:str):
         def get_remote_file_size(file:str):
@@ -76,7 +78,8 @@ class FolderFtps():
         def recursive_folders(folder:str):
             for file_folder, data in self.ftp.mlsd(folder):
                 file_folder_tree = folder + '/' + file_folder
-                folder_file_abs = os.path.abspath(self.local_folder + file_folder_tree)
+                folder_file_abs = os.path.abspath(
+                    (self.local_folder + file_folder_tree).replace(self.remote_folder,''))
                 os.makedirs(os.path.dirname(folder_file_abs),exist_ok=True)
                 if data['type'] == 'dir':
                     recursive_folders(file_folder_tree)
@@ -88,6 +91,62 @@ class FolderFtps():
                             self.ftp.retrbinary(f'RETR {file_folder_tree}',lambda data: f.write(data))
                             print(f'Wrote file {folder_file_abs}')
         recursive_folders(self.remote_folder)
+
+        self.ftp.quit()
+    
+    def remove_from_remote(self):
+        self.ftp = self.ftps_connect()
+        folderlist = []
+        def recursive_folders(folder:str):
+            for file_folder, data in self.ftp.mlsd(folder):
+                file_folder_tree = folder + '/' + file_folder
+                folder_file_abs = os.path.abspath(
+                    (self.local_folder + file_folder_tree).replace(self.remote_folder,''))
+                if data['type'] == 'dir':
+                    if not os.path.exists(folder_file_abs):
+                        print('deleting', file_folder_tree)
+                        folderlist.append(file_folder_tree)
+                    recursive_folders(file_folder_tree)
+                if data['type'] == 'file':
+                    if not os.path.exists(folder_file_abs):
+                        print('deleting', file_folder_tree)
+                        self.ftp.delete(file_folder_tree)
+        recursive_folders(self.remote_folder)
+
+        for folder in folderlist[::-1]:
+            self.ftp.rmd(folder)
+        self.ftp.quit()
+
+    def remove_from_local(self):
+        # if self.ftp.sock is None 
+        self.ftp = self.ftps_connect()
+
+        folderlist = []
+
+        for root,_,files in os.walk(self.local_folder):
+            os.chdir(self.local_folder)
+            os.chdir(root)
+            self.ftp.cwd('/'+ self.remote_folder)
+            working_remote_folder = root.removeprefix(self.local_folder).replace('\\','/').removeprefix('/')
+            
+            try:
+                self.ftp.cwd(working_remote_folder)
+            except ftplib.error_perm as e:
+                if 'No such file or directory' in str(e):
+                    print('deleting dir', working_remote_folder)
+                    folderlist.append(working_remote_folder)
+
+            for file in files:
+                try:
+                    self.ftp.size(file)
+                except ftplib.error_perm as e:
+                    if 'No such file or directory' in str(e):
+                        print(f"deleting file {file}")
+                        os.remove(file)
+
+        os.chdir(self.local_folder)
+        for folder in folderlist[::-1]:
+            os.rmdir(os.path.abspath(self.local_folder + '/' + folder))
 
         self.ftp.quit()
 
